@@ -1,0 +1,46 @@
+version: "3"
+
+services:
+  mongodb:
+    image: mongo:5.0.2
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - test_app
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=$DB_USER
+      - MONGO_INITDB_ROOT_PASSWORD=$DB_PASSWORD
+    volumes:
+      - ./addons/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./data:/data/db
+    ports:
+      - '27017:27017'
+  app:
+    depends_on:
+      - mongodb
+    networks: 
+      - test_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/usr/src/app/
+      - ./nodemon.json:/usr/src/app/nodemon.json
+    image: app
+    container_name: app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DB_HOST=$DB_HOST
+      - DB_USER=$DB_USER
+      - DB_PASSWORD=$DB_PASSWORD
+      - DB_URL=mongodb://mongodb
+    stdin_open: true
+    tty: true
+    ports:
+      - "4200:4200"
+    command: npm run watch
+
+networks:
+  test_app:
+    driver: bridge
